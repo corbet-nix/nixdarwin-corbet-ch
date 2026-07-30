@@ -1,13 +1,13 @@
-# modules/nixmac.nix
+# modules/nixdarwin.nix
 #
-# nixmac's own real content: bridging a cross-host identity (nixid.posix.identities.<name>, read
-# DEFENSIVELY -- nixmac never takes nixid as a flake input, see flake.nix's own header) onto a
+# nixdarwin's own real content: bridging a cross-host identity (nixiam.posix.identities.<name>, read
+# DEFENSIVELY -- nixdarwin never takes nixiam as a flake input, see flake.nix's own header) onto a
 # nix-darwin `users.users.<name>` account, and closing the one silent failure mode that bridge
 # would otherwise reopen on THIS backend specifically. Nothing else in this file: see
 # docs/portability.md for why the rest of the family's domains either cannot land here at all
 # (nixluks, nixstorage's ZFS shape, nixboot, nixram, nixgpu -- each tied to a Linux-only
 # primitive) or already land here unmodified without this repo doing anything at all (nixsh's
-# home-manager backend, nixid.posix itself, nixmachines).
+# home-manager backend, nixiam.posix itself).
 #
 # THE INCIDENT THIS CLOSES, GROUND-TRUTHED AGAINST NIX-DARWIN'S OWN SOURCE
 # (modules/users/default.nix, `isCreated`/`isDeleted`): nix-darwin does NOT create, delete, or
@@ -20,7 +20,7 @@
 # is exactly why this is a NEW failure mode this backend introduces, not one inherited from
 # elsewhere in the family.
 #
-# WHY THIS DOES NOT ALSO TOUCH `gid`. nixid.posix's own User-Private-Group convention -- an unset
+# WHY THIS DOES NOT ALSO TOUCH `gid`. nixiam.posix's own User-Private-Group convention -- an unset
 # `gid` resolves to that identity's own `uid` -- has no equivalent meaning on macOS: nix-darwin's
 # own `gid` default is 20 (`staff`, the ordinary interactive-account group; also ground-truthed
 # from modules/users/user.nix), and forcing a Linux-style UPG number over that would silently
@@ -38,22 +38,22 @@
 with lib;
 
 let
-  cfg = config.nixmac;
+  cfg = config.nixdarwin;
 
-  # nixid.posix: read defensively -- see this file's own header, and flake.nix's own input
-  # comment, for why nixmac never takes nixid as a flake input. The same posture nixstorage's own
+  # nixiam.posix: read defensively -- see this file's own header, and flake.nix's own input
+  # comment, for why nixdarwin never takes nixiam as a flake input. The same posture nixstorage's own
   # reconciler.nix uses for the identical table.
-  identitiesDeclared = options ? nixid && (options.nixid ? posix) && (options.nixid.posix ? identities);
-  identities = config.nixid.posix.identities or { };
+  identitiesDeclared = options ? nixiam && (options.nixiam ? posix) && (options.nixiam.posix ? identities);
+  identities = config.nixiam.posix.identities or { };
 
   knownIdentities =
     if identities == { } then "(none declared)" else concatStringsSep ", " (attrNames identities);
 
   notImportedHint = optionalString (!identitiesDeclared) ''
 
-    nixid's posix module does not appear to be imported into this configuration at all (checked
-    via `options.nixid.posix.identities`). Either import it alongside nixmac, or set
-    `nixmac.users."<name>".uid` directly instead of `fromIdentity`.'';
+    nixiam's posix module does not appear to be imported into this configuration at all (checked
+    via `options.nixiam.posix.identities`). Either import it alongside nixdarwin, or set
+    `nixdarwin.users."<name>".uid` directly instead of `fromIdentity`.'';
 
   userNames = attrNames cfg.users;
 
@@ -78,9 +78,9 @@ let
   # it is read at all, rather than returning `null` -- the same reason `safeUid` above exists.
   #
   # This is an explicit check, not incidental: composing this module under a real `darwinSystem`
-  # and forcing `.config.system.build.toplevel` (exactly the mechanism nixluks/nixmachines rely on
-  # for their own "required option, no default" cases) does NOT, on its own, force an unresolved
-  # `nixmac.users.<name>.uid` -- confirmed empirically while writing this module. Unlike
+  # and forcing `.config.system.build.toplevel` (exactly the mechanism nixluks relies on
+  # for its own "required option, no default" cases) does NOT, on its own, force an unresolved
+  # `nixdarwin.users.<name>.uid` -- confirmed empirically while writing this module. Unlike
   # nixluks's `environment.etc."crypttab".text` (a real `/etc` file, whose *content* must be
   # computed, forcing every volume's `device`, to construct the derivation that becomes part of
   # `toplevel`'s own closure), nix-darwin's per-user uid/gid table
@@ -97,9 +97,9 @@ let
     userNames;
 in
 {
-  options.nixmac.users = mkOption {
+  options.nixdarwin.users = mkOption {
     # `{ name, config, ... }`'s own `config` below is THIS ONE USER's submodule config
-    # (`config.fromIdentity`), a different value than the outer `cfg = config.nixmac` above --
+    # (`config.fromIdentity`), a different value than the outer `cfg = config.nixdarwin` above --
     # the same double meaning nixluks's own `volumeModule = { name, config, ... }:` already
     # relies on for `fromDisk`/`device`.
     type = types.attrsOf (types.submodule ({ name, config, ... }:
@@ -116,19 +116,19 @@ in
             default = null;
             example = "app-foo";
             description = ''
-              Name of an entry in `nixid.posix.identities` (the cross-host uid/gid registry) whose
+              Name of an entry in `nixiam.posix.identities` (the cross-host uid/gid registry) whose
               `uid` this macOS account should share, so a login account on this Mac and every
               other identity carrying the same name elsewhere resolve to the SAME numeric
-              uid -- the same reason nixid's own header cares about a shared NFSv4 `domain`: two
+              uid -- the same reason nixiam's own header cares about a shared NFSv4 `domain`: two
               different numbers meaning "the same identity" on two machines is exactly the drift
               that turns a shared SMB/NFS mount into a silently-wrong-permission bug on whichever
               side drifted.
 
               When set, `uid` DEFAULTS to that identity's own `uid` instead of the same number
               being typed a second time here. Leave `null` to type `uid` directly -- a Mac not
-              sharing identities with other hosts, or nixid not being imported at all,
-              is unaffected: nixmac never imports nixid and reads it defensively
-              (`config.nixid.posix.identities or { }`). Setting `uid` explicitly always wins over
+              sharing identities with other hosts, or nixiam not being imported at all,
+              is unaffected: nixdarwin never imports nixiam and reads it defensively
+              (`config.nixiam.posix.identities or { }`). Setting `uid` explicitly always wins over
               whatever `fromIdentity` would have resolved to.
             '';
           };
@@ -137,14 +137,14 @@ in
             type = types.int;
             description = ''
               This account's uid. Required unless `fromIdentity` names a resolvable
-              `nixid.posix.identities` entry -- see that option. There is deliberately no
-              fallback default when neither is given: an account nixmac does not know how to
+              `nixiam.posix.identities` entry -- see that option. There is deliberately no
+              fallback default when neither is given: an account nixdarwin does not know how to
               number is a configuration error to catch at build time, never a value to guess at.
             '';
           } // optionalAttrs (resolvedUid != null) {
             default = resolvedUid;
             defaultText = literalExpression
-              "nixid.posix.identities.<fromIdentity>.uid, resolved via this account's own fromIdentity";
+              "nixiam.posix.identities.<fromIdentity>.uid, resolved via this account's own fromIdentity";
           });
         };
       }));
@@ -167,8 +167,8 @@ in
         (name: {
           assertion = false;
           message = ''
-            nixmac.users."${name}": neither uid nor fromIdentity is set. Set one of the two --
-            there is deliberately no fallback default here, see modules/nixmac.nix's own header.
+            nixdarwin.users."${name}": neither uid nor fromIdentity is set. Set one of the two --
+            there is deliberately no fallback default here, see modules/nixdarwin.nix's own header.
           '';
         })
         unresolvedNames)
@@ -176,8 +176,8 @@ in
         (name: {
           assertion = identities ? ${cfg.users.${name}.fromIdentity};
           message = ''
-            nixmac.users."${name}".fromIdentity = "${cfg.users.${name}.fromIdentity}" names an
-            entry that does not exist in nixid.posix.identities. Known identities: ${knownIdentities}.${notImportedHint}
+            nixdarwin.users."${name}".fromIdentity = "${cfg.users.${name}.fromIdentity}" names an
+            entry that does not exist in nixiam.posix.identities. Known identities: ${knownIdentities}.${notImportedHint}
             Fix the name, or set users."${name}".uid directly instead of using fromIdentity.
           '';
         })
@@ -185,7 +185,7 @@ in
       ++ (optionals (uidDups != [ ]) [{
         assertion = false;
         message = ''
-          nixmac.users: ${concatStringsSep ", " uidDups} resolve to the SAME uid -- each declared
+          nixdarwin.users: ${concatStringsSep ", " uidDups} resolve to the SAME uid -- each declared
           account must have its own. Two macOS accounts sharing a uid is invisible at declaration
           time and stays invisible at login: both exist, and each can silently read and overwrite
           the other's files.
@@ -195,7 +195,7 @@ in
     users.users = mapAttrs (name: u: { uid = u.uid; }) cfg.users;
 
     # THE FIX ITSELF: every declared account is automatically known, so the knownUsers omission
-    # this file's header describes cannot happen for anything declared through nixmac. Merges
+    # this file's header describes cannot happen for anything declared through nixdarwin. Merges
     # with any names a host adds directly -- `users.knownUsers` is a plain `listOf`, concatenated
     # across modules exactly like `environment.systemPackages` is -- never a replacement for them.
     users.knownUsers = userNames;
