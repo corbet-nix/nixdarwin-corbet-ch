@@ -43,19 +43,22 @@ let
   inherit (factsLib) probeFact;
 
   # nixiam.posix.identities: read through lib.probeFact -- see this file's own header, and
-  # flake.nix's own input comment, for why nixdarwin never takes nixiam as a flake input. Used to
-  # be `options ? nixiam && (options.nixiam ? posix) && (options.nixiam.posix ? identities)`, an
-  # options-tree check that could not tell "nixiam not imported here" from "nixiam IS imported but
-  # `posix.identities` moved or was renamed underneath this exact read" -- both reported the same
-  # "not imported" hint below, which is a wrong message pointing at the wrong fix when the real
+  # flake.nix's own input comment, for why nixdarwin never takes nixiam as a flake input. A naive
+  # options-tree check (`options ? nixiam && (options.nixiam ? posix) && (options.nixiam.posix ?
+  # identities)`) cannot tell "nixiam not imported here" from "nixiam IS imported but
+  # `posix.identities` moved or was renamed underneath this exact read" -- both would report the
+  # same "not imported" hint below, a wrong message pointing at the wrong fix when the real
   # problem is a rename. `identitiesProbe.state` answers "is nixiam composed" from `config`
   # itself, and a genuine rename additionally warns (`config.warnings` below) even on a host
   # where no account currently sets `fromIdentity` at all -- see `checks/default.nix`'s
   # `fact-wiring/*` group for the proof.
   identitiesProbe = probeFact {
     inherit config;
-    namespace = "nixiam";
-    path = [ "posix" "identities" ];
+    # The owner is `nixiam.posix`, not `nixiam`: a host can compose that repo's lldap or pocket-id
+    # module and not its posix module, and probing the bare namespace reports "the fact was
+    # renamed" about a host that simply never imported it.
+    namespace = "nixiam.posix";
+    path = [ "identities" ];
     fallback = { };
   };
   identitiesDeclared = identitiesProbe.state != "absent";
