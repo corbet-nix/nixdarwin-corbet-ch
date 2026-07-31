@@ -88,6 +88,7 @@ has no honest translation onto macOS's own `staff`-group default.
 |---|---|
 | `flake.nix` | Flake entry point: `darwinModules.nixdarwin`/`.default`. `nix-darwin` is a checks-only input -- see the flake's own header for why. |
 | `modules/nixdarwin.nix` | The module: `nixdarwin.users.<name>`, its assertions, and the `users.knownUsers` fix. Pure data plus the one real config it emits -- see its own header. |
+| `lib/facts.nix` | `lib.probeFact` -- vendored from [nixhost](https://github.com/julian-corbet/nixhost-corbet-ch)'s own copy, not reinvented here. Distinguishes "nixiam not composed" from "nixiam composed but `posix.identities` renamed" for the read above -- see its own header. |
 | `docs/portability.md` | The audit this repo's scope was decided from. |
 | `examples/host/configuration.nix` | The one generic, fictional example this public repo ships -- exercises both `uid` and `fromIdentity`. |
 | `checks/` | Eval-time tests: a real `darwinSystem` composition against `github:LnL7/nix-darwin`, every assertion proven in both directions, and a structural check that `nixosModules`/`systemManagerModules` genuinely do not exist on this flake. |

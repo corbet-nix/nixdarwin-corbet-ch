@@ -33,26 +33,41 @@
 # is itself a nix-darwin-only option; NixOS and system-manager have no equivalent list at all, so
 # composing this file under either backend fails immediately with "the option `users.knownUsers`
 # does not exist" -- loudly, at eval time, never silently.
-{ config, lib, options, ... }:
+{ config, lib, ... }:
 
 with lib;
 
 let
   cfg = config.nixdarwin;
+  factsLib = import ../lib/facts.nix { inherit lib; };
+  inherit (factsLib) probeFact;
 
-  # nixiam.posix: read defensively -- see this file's own header, and flake.nix's own input
-  # comment, for why nixdarwin never takes nixiam as a flake input. The same posture nixstorage's own
-  # reconciler.nix uses for the identical table.
-  identitiesDeclared = options ? nixiam && (options.nixiam ? posix) && (options.nixiam.posix ? identities);
-  identities = config.nixiam.posix.identities or { };
+  # nixiam.posix.identities: read through lib.probeFact -- see this file's own header, and
+  # flake.nix's own input comment, for why nixdarwin never takes nixiam as a flake input. Used to
+  # be `options ? nixiam && (options.nixiam ? posix) && (options.nixiam.posix ? identities)`, an
+  # options-tree check that could not tell "nixiam not imported here" from "nixiam IS imported but
+  # `posix.identities` moved or was renamed underneath this exact read" -- both reported the same
+  # "not imported" hint below, which is a wrong message pointing at the wrong fix when the real
+  # problem is a rename. `identitiesProbe.state` answers "is nixiam composed" from `config`
+  # itself, and a genuine rename additionally warns (`config.warnings` below) even on a host
+  # where no account currently sets `fromIdentity` at all -- see `checks/default.nix`'s
+  # `fact-wiring/*` group for the proof.
+  identitiesProbe = probeFact {
+    inherit config;
+    namespace = "nixiam";
+    path = [ "posix" "identities" ];
+    fallback = { };
+  };
+  identitiesDeclared = identitiesProbe.state != "absent";
+  identities = identitiesProbe.value;
 
   knownIdentities =
     if identities == { } then "(none declared)" else concatStringsSep ", " (attrNames identities);
 
   notImportedHint = optionalString (!identitiesDeclared) ''
 
-    nixiam's posix module does not appear to be imported into this configuration at all (checked
-    via `options.nixiam.posix.identities`). Either import it alongside nixdarwin, or set
+    nixiam does not appear to be composed into this configuration at all (checked via
+    lib.probeFact against the `nixiam` namespace). Either import it alongside nixdarwin, or set
     `nixdarwin.users."<name>".uid` directly instead of `fromIdentity`.'';
 
   userNames = attrNames cfg.users;
@@ -191,6 +206,12 @@ in
           the other's files.
         '';
       }]);
+
+    # THE SHARED READ CONTRACT'S OWN OUTPUT: state (c) on `nixiam.posix.identities` -- composed
+    # but renamed -- warns here even when no account currently sets `fromIdentity` at all, the
+    # case the `fromIdentity` assertion above can never catch because nothing forces it to look.
+    # See `identitiesProbe`'s own comment above and `checks/default.nix`'s `fact-wiring/*` group.
+    warnings = identitiesProbe.warnings;
 
     users.users = mapAttrs (name: u: { uid = u.uid; }) cfg.users;
 

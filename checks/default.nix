@@ -40,6 +40,11 @@
 #      (hostname, IP, uid) -- the house "mechanism public, values private" rule, made mechanically
 #      checkable the same way nixluks's own `structurally-safe` check works, rather than merely
 #      asserted in prose.
+#   8. `lib.probeFact` (`../lib/facts.nix`, vendored from nixhost's own copy) actually
+#      distinguishes, THROUGH this real module's wiring, "nixiam not composed at all" from
+#      "nixiam composed but `posix.identities` renamed" -- both used to report the identical
+#      "not imported" hint, which pointed at the wrong fix for the second case. The renamed case
+#      warns exactly once, naming the option path, and never fails the build on its own.
 { pkgs, lib, nixpkgs, system, nix-darwin, nixdarwinModule, flakeSelf }:
 
 let
@@ -102,6 +107,31 @@ let
     { nixdarwin.users.alice.uid = 501; }
     { users.knownUsers = [ "someone-else" ]; }
   ];
+
+  # ── fact-wiring fixtures: `lib.probeFact` proven THROUGH the real nixdarwin module ──────────
+  #
+  # One account declared in every fixture below (`cfg.users != { }`, gating `config.warnings`),
+  # but never referencing `fromIdentity` -- so the only thing that could possibly produce a
+  # warning is the probe itself, never the `fromIdentity`-resolution assertion reacting to an
+  # unresolved name.
+  quietUser = { nixdarwin.users.someone.uid = 501; };
+
+  cfgFactsNoNixiamAtAll = evalDarwin [ quietUser ];
+
+  cfgFactsNixiamFaithful = evalDarwin [ fakeNixiamPosixModule withOneIdentity quietUser ];
+
+  # THE DECOY: nixiam's real option surface, renamed. Composes the SAME top-level `nixiam`
+  # namespace the real sibling would (so `config ? nixiam` reads true -- state (a), "not
+  # composed at all", must NOT be what this fixture exercises), with the specific path this
+  # module's own probe reads (`posix.identities`) missing, renamed to a plausible neighbour.
+  fakeNixiamPosixRenamedModule = {
+    options.nixiam.posix.accounts = lib.mkOption {
+      type = lib.types.attrsOf lib.types.anything;
+      default = { };
+    };
+  };
+
+  cfgFactsNixiamRenamed = evalDarwin [ fakeNixiamPosixRenamedModule quietUser ];
 
   results = [
     # --- 1. no default is a hard failure, never a silent guess ---------------------------------
@@ -172,6 +202,28 @@ let
     (check "scope/darwinModules-default-points-at-the-real-module"
       (flakeSelf.darwinModules.default == flakeSelf.darwinModules.nixdarwin)
       "darwinModules.default has drifted from darwinModules.nixdarwin")
+
+    # --- 8. fact-wiring: lib.probeFact proven through the real module, not just lib/facts.nix's own
+    (check "fact-wiring/nixiam-not-composed-has-no-warnings"
+      (cfgFactsNoNixiamAtAll.warnings == [ ])
+      "got warnings=${builtins.toJSON cfgFactsNoNixiamAtAll.warnings}, expected none: state (a) -- nixiam never imported at all -- must stay silent")
+
+    (check "fact-wiring/nixiam-faithful-has-no-warnings"
+      (cfgFactsNixiamFaithful.warnings == [ ])
+      "got warnings=${builtins.toJSON cfgFactsNixiamFaithful.warnings}, expected none: nixiam composed with its real, un-renamed shape must produce zero warnings even when no account references fromIdentity at all")
+
+    (check "fact-wiring/nixiam-posix-renamed-warns-exactly-once"
+      (
+        let w = cfgFactsNixiamRenamed.warnings; in
+        lib.length w == 1
+        && lib.hasInfix "nixiam.posix.identities" (lib.head w)
+        && lib.hasInfix "nixiam" (lib.head w)
+      )
+      "got warnings=${builtins.toJSON cfgFactsNixiamRenamed.warnings}, expected exactly one, naming nixiam.posix.identities -- the decoy renames it to nixiam.posix.accounts while nixiam itself IS composed, and no account references fromIdentity at all, so nothing but the probe itself can be the source")
+
+    (check "fact-wiring/nixiam-posix-renamed-does-not-fail-the-build"
+      (!(darwinBuildFails [ fakeNixiamPosixRenamedModule quietUser ]))
+      "state (c) must warn, not fail the build -- lib.probeFact defaults to mode = \"warn\", never \"assert\", for this read; a renamed nixiam is no different from an absent one for an account that never sets fromIdentity")
   ];
 
   # ── 7. mechanism public, values private: no real host identifier anywhere in the module's own
@@ -187,7 +239,7 @@ let
   ];
   scanText = text: lib.filter (w: lib.hasInfix w text) forbiddenStrings;
   scanFile = path: scanText (builtins.readFile path);
-  scannedPaths = [ ../modules/nixdarwin.nix ../examples/host/configuration.nix ];
+  scannedPaths = [ ../modules/nixdarwin.nix ../lib/facts.nix ../examples/host/configuration.nix ];
   leaks = lib.concatMap (p: map (w: { inherit p w; }) (scanFile p)) scannedPaths;
 
   publicValuesResults = [
