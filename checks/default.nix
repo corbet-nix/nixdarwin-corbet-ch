@@ -42,9 +42,10 @@
 #      asserted in prose.
 #   8. `lib.probeFact` (`../lib/facts.nix`, vendored from nixhost's own copy) actually
 #      distinguishes, THROUGH this real module's wiring, "nixiam not composed at all" from
-#      "nixiam composed but `posix.identities` renamed" -- both used to report the identical
-#      "not imported" hint, which pointed at the wrong fix for the second case. The renamed case
-#      warns exactly once, naming the option path, and never fails the build on its own.
+#      "nixiam composed but `posix.identities` renamed" -- a naive check would report the
+#      identical "not imported" hint for both, pointing at the wrong fix for the second case. The
+#      renamed case warns exactly once, naming the option path, and never fails the build on its
+#      own.
 { pkgs, lib, nixpkgs, system, nix-darwin, nixdarwinModule, flakeSelf }:
 
 let
