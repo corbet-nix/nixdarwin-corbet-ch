@@ -1,7 +1,7 @@
 # nixdarwin
 
-**The darwin sibling of [nixarch](https://github.com/julian-corbet/nixarch-corbet-ch) (Arch under
-system-manager) and [nixnas](https://github.com/julian-corbet/nixnas)/nixvps (NixOS
+**The darwin sibling of [nixarch](https://github.com/corbet-nix/nixarch-corbet-ch) (Arch under
+system-manager) and [nixnas](https://github.com/corbet-nix/nixnas)/nixvps (NixOS
 flavours): the OS-flavour layer for a Mac host, managed by upstream
 [nix-darwin](https://github.com/LnL7/nix-darwin).**
 
@@ -39,7 +39,7 @@ So this repo is deliberately thin:
    backend file, and which cannot land here at all, with the concrete Linux/XNU primitive each
    verdict rests on. One of those findings was verified empirically against the real
    `github:LnL7/nix-darwin` flake while writing this repo, closing an open question
-   [nixiam](https://github.com/julian-corbet/nixiam-corbet-ch) had left untested.
+   [nixiam](https://github.com/corbet-nix/nixiam-corbet-ch) had left untested.
 2. **`modules/nixdarwin.nix`** -- the one piece of real glue nothing else in the family provides:
    bridging nixiam's cross-host identity registry (`nixiam.posix.identities`, read defensively --
    see below) onto a real nix-darwin `users.users.<name>` account, closing a genuine, ground-
@@ -64,7 +64,7 @@ has no honest translation onto macOS's own `staff`-group default.
 
 ```nix
 {
-  inputs.nixdarwin.url = "github:julian-corbet/nixdarwin-corbet-ch";
+  inputs.nixdarwin.url = "github:corbet-nix/nixdarwin-corbet-ch";
 
   outputs = { self, nix-darwin, nixdarwin, ... }: {
     darwinConfigurations.my-mac = nix-darwin.lib.darwinSystem {
@@ -88,7 +88,7 @@ has no honest translation onto macOS's own `staff`-group default.
 |---|---|
 | `flake.nix` | Flake entry point: `darwinModules.nixdarwin`/`.default`. `nix-darwin` is a checks-only input -- see the flake's own header for why. |
 | `modules/nixdarwin.nix` | The module: `nixdarwin.users.<name>`, its assertions, and the `users.knownUsers` fix. Pure data plus the one real config it emits -- see its own header. |
-| `lib/facts.nix` | `lib.probeFact` -- vendored from [nixhost](https://github.com/julian-corbet/nixhost-corbet-ch)'s own copy, not reinvented here. Distinguishes "nixiam not composed" from "nixiam composed but `posix.identities` renamed" for the read above -- see its own header. |
+| `lib/facts.nix` | `lib.probeFact` -- vendored from [nixhost](https://github.com/corbet-nix/nixhost-corbet-ch)'s own copy, not reinvented here. Distinguishes "nixiam not composed" from "nixiam composed but `posix.identities` renamed" for the read above -- see its own header. |
 | `docs/portability.md` | The audit this repo's scope was decided from. |
 | `examples/host/configuration.nix` | The one generic, fictional example this public repo ships -- exercises both `uid` and `fromIdentity`. |
 | `checks/` | Eval-time tests: a real `darwinSystem` composition against `github:LnL7/nix-darwin`, every assertion proven in both directions, and a structural check that `nixosModules`/`systemManagerModules` genuinely do not exist on this flake. |
@@ -97,13 +97,13 @@ has no honest translation onto macOS's own `staff`-group default.
 
 ## Related projects
 
-Part of the same family: [nixarch](https://github.com/julian-corbet/nixarch-corbet-ch) (the Arch/
+Part of the same family: [nixarch](https://github.com/corbet-nix/nixarch-corbet-ch) (the Arch/
 system-manager flavour this repo's own README structure and "thin, honest about scope" posture
-follows), and [nixiam](https://github.com/julian-corbet/nixiam-corbet-ch) (owns the `posix.<name>`
+follows), and [nixiam](https://github.com/corbet-nix/nixiam-corbet-ch) (owns the `posix.<name>`
 identity registry this repo's own `fromIdentity` reads defensively -- nixdarwin never takes it as a
 flake input). nixdarwin depends on neither at the Nix level -- see `flake.nix`'s own
 header for why crossing that line is exactly the mistake this family's own house rules forbid.
 
-## License
+## Licence
 
-[MIT License](LICENSE) &copy; 2026 Julian Corbet
+Outbound licence is `MIT OR Apache-2.0`. See `LICENSE-MIT` and `LICENSE-APACHE`; every source file carries `SPDX-License-Identifier: MIT OR Apache-2.0`.

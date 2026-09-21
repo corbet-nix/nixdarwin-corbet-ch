@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 # A generic nixdarwin-composed nix-darwin host, used by the `example-evaluates` check.
 #
 # Not a real operator's actual Mac -- see the repo README for why a public repo ships an invented

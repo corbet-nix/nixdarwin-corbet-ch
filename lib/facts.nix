@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 # lib/facts.nix -- `lib.probeFact`, vendored from nixhost's `lib/facts.nix`
 #
 # THIS IS A DELIBERATE LOCAL COPY, not a fork. The canonical version -- full defect-class

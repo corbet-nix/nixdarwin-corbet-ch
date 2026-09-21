@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 # modules/nixdarwin.nix
 #
 # nixdarwin's own real content: bridging a cross-host identity (nixiam.posix.identities.<name>, read

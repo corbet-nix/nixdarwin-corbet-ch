@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 {
   description = "nixdarwin -- the darwin sibling of nixarch (Arch/system-manager) and nixnas/nixvps (NixOS flavours): the OS-flavour layer for a Mac host, managed by upstream nix-darwin (https://github.com/LnL7/nix-darwin -- a different project; see README's own \"Name\" section for why this repo is called nixdarwin and not nix-darwin). Ships exactly one piece of real glue nothing else in the family provides -- bridging nixiam's cross-host identity registry onto a real macOS account without reopening the one silent failure nix-darwin's own users.knownUsers gate creates for it -- plus the domain-by-domain portability audit (docs/portability.md) this repo's own scope was decided from.";
 

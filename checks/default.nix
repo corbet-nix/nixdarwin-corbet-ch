@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 # checks/default.nix
 #
 # EVAL-TIME tests, the same posture as the sibling nixluks/nixiam projects. No VM, no
